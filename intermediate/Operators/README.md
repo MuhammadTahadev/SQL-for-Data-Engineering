@@ -426,3 +426,142 @@ set of category values, status codes, or region identifiers — making queries
 both cleaner and easier to maintain when the list needs updating.
 
 ---
+
+## 5. search_operators.sql
+
+### How LIKE Works
+
+`LIKE` searches for a pattern inside a text column rather than matching an
+exact value. It uses two wildcard characters to build patterns:
+
+| Wildcard | Meaning                              |
+|----------|--------------------------------------|
+| `%`      | Any sequence of zero or more characters |
+| `_`      | Exactly one character, any character |
+
+You combine these with literal characters to define what the pattern must look like.
+
+---
+
+### Query 1 — Find all customers whose first_name starts with 'M'
+```sql
+SELECT *
+FROM customers
+WHERE first_name LIKE 'M%'
+```
+
+**Breakdown:**
+- `'M%'` means the first character must be `M` and anything can follow after it — zero or more characters.
+- Only the starting character is fixed. The rest of the name does not matter.
+
+**Expected Result:**
+
+| id | first_name | country | score |
+|----|------------|---------|-------|
+| 1  | Maria      | Germany | 350   |
+| 4  | Martin     | Germany | 500   |
+
+---
+
+### Query 2 — Find all customers whose first_name ends with 'n'
+```sql
+SELECT *
+FROM customers
+WHERE first_name LIKE '%n'
+```
+
+**Breakdown:**
+- `'%n'` means anything can come before, but the last character must be `n`.
+- The `%` at the start absorbs all characters before the final `n`.
+
+**Expected Result:**
+
+| id | first_name | country | score |
+|----|------------|---------|-------|
+| 4  | Martin     | Germany | 500   |
+
+---
+
+### Query 3 — Find all customers whose first_name contains 'r'
+```sql
+SELECT *
+FROM customers
+WHERE first_name LIKE '%r%'
+```
+
+**Breakdown:**
+- `'%r%'` means anything can appear before or after, as long as an `r` exists somewhere in the value.
+- The `r` can be at any position — first, last, or anywhere in the middle.
+
+**Expected Result:**
+
+| id | first_name | country | score |
+|----|------------|---------|-------|
+| 1  | Maria      | Germany | 350   |
+| 5  | Peter      | USA     | 0     |
+
+> Maria contains `r` at position 4. Peter contains `r` at position 3.
+> Martin also has an `r` but it appears as the second character — wait, let's
+> check: M-a-r-t-i-n. Yes, Martin contains `r` at position 3 as well.
+
+| id | first_name | country | score |
+|----|------------|---------|-------|
+| 1  | Maria      | Germany | 350   |
+| 4  | Martin     | Germany | 500   |
+| 5  | Peter      | USA     | 0     |
+
+---
+
+### Query 4 — Find all customers whose first_name has 'r' in the third position
+```sql
+SELECT *
+FROM customers
+WHERE first_name LIKE '__r%'
+```
+
+**Breakdown:**
+- `'__r%'` breaks down position by position:
+  - Position 1: `_` — exactly one character, anything
+  - Position 2: `_` — exactly one character, anything
+  - Position 3: `r` — must be the literal character `r`
+  - Position 4+: `%` — anything can follow or nothing at all
+- Only names where `r` appears specifically as the third character will match.
+
+Checking each name against the pattern:
+
+| first_name | Position 1 | Position 2 | Position 3 | Match? |
+|------------|------------|------------|------------|--------|
+| Maria      | M          | a          | r          | ✅ Yes |
+| John       | J          | o          | h          | ❌ No  |
+| Georg      | G          | e          | o          | ❌ No  |
+| Martin     | M          | a          | r          | ✅ Yes |
+| Peter      | P          | e          | t          | ❌ No  |
+
+**Expected Result:**
+
+| id | first_name | country | score |
+|----|------------|---------|-------|
+| 1  | Maria      | Germany | 350   |
+| 4  | Martin     | Germany | 500   |
+
+---
+
+### Key Takeaway
+
+`LIKE` is a search operator that matches patterns in text rather than exact
+values. The two wildcards serve completely different purposes:
+
+- `%` is flexible — it absorbs any number of characters including none
+- `_` is strict — it reserves exactly one character position
+
+They can be combined in any order to describe exactly where a character or
+sequence must appear within a value.
+
+In Data Engineering, `LIKE` is used heavily during data cleaning and
+validation — for example finding malformed email addresses, filtering product
+codes that follow a naming convention, or identifying records where a field
+starts with an unexpected prefix. It is powerful but can be slow on very
+large tables without proper indexing, so in production pipelines it is used
+carefully.
+
+---
