@@ -565,3 +565,105 @@ large tables without proper indexing, so in production pipelines it is used
 carefully.
 
 ---
+
+## 6. null_operators.sql
+
+### What is NULL?
+
+NULL in SQL means the absence of a value — it is not zero, not an empty
+string, and not a space. It simply means the data is unknown or missing.
+Because of this, NULL cannot be compared using regular operators like `=`
+or `!=`. You cannot write `WHERE country = NULL` — it will never return
+results. Instead, T-SQL provides `IS NULL` and `IS NOT NULL` specifically
+for this purpose.
+
+---
+
+### Setup — Inserting a NULL row for practice
+```sql
+INSERT INTO customers (id, first_name, country, score)
+VALUES (7, 'Asim', NULL, NULL)
+```
+
+**Breakdown:**
+- This inserts a new row where both `country` and `score` have no value — they are explicitly set to `NULL`.
+- This is a common practice when learning or testing NULL behaviour since real datasets may not always have missing values available.
+
+**Updated customers table after insert:**
+
+| id | first_name | country | score |
+|----|------------|---------|-------|
+| 1  | Maria      | Germany | 350   |
+| 2  | John       | USA     | 900   |
+| 3  | Georg      | UK      | 750   |
+| 4  | Martin     | Germany | 500   |
+| 5  | Peter      | USA     | 0     |
+| 7  | Asim       | NULL    | NULL  |
+
+---
+
+### Query 1 — Find all customers with no country value
+```sql
+SELECT *
+FROM customers
+WHERE country IS NULL
+```
+
+**Breakdown:**
+- `IS NULL` checks whether a column contains no value at all.
+- This is the only correct way to filter for missing values in SQL. Using `= NULL` does not work because NULL is not equal to anything — not even itself.
+
+**Expected Result:**
+
+| id | first_name | country | score |
+|----|------------|---------|-------|
+| 7  | Asim       | NULL    | NULL  |
+
+---
+
+### Query 2 — Find all customers who have a country value
+```sql
+SELECT *
+FROM customers
+WHERE country IS NOT NULL
+```
+
+**Breakdown:**
+- `IS NOT NULL` is the inverse — it returns only rows where the column actually contains a value.
+- This is commonly used at the start of a transformation query to exclude incomplete records before processing.
+
+**Expected Result:**
+
+| id | first_name | country | score |
+|----|------------|---------|-------|
+| 1  | Maria      | Germany | 350   |
+| 2  | John       | USA     | 900   |
+| 3  | Georg      | UK      | 750   |
+| 4  | Martin     | Germany | 500   |
+| 5  | Peter      | USA     | 0     |
+
+> Asim is excluded because his country value is NULL.
+
+---
+
+### Key Takeaway
+
+NULL represents missing or unknown data — not zero, not blank, not false.
+This distinction matters enormously in SQL because:
+
+| What you might try  | Does it work? | Why                          |
+|---------------------|---------------|------------------------------|
+| `= NULL`            | ❌ No         | NULL is not equal to anything |
+| `!= NULL`           | ❌ No         | NULL cannot be compared       |
+| `IS NULL`           | ✅ Yes        | Correct way to check for NULL |
+| `IS NOT NULL`       | ✅ Yes        | Correct way to exclude NULL   |
+
+In Data Engineering, NULL handling is one of the most critical skills.
+Raw data from source systems almost always contains missing values. Before
+loading data into a warehouse or running aggregations, you need to identify,
+filter, or replace NULLs — otherwise they silently propagate through
+calculations. For example, `AVG(score)` ignores NULLs automatically in SQL,
+but `SUM(score) / COUNT(*)` does not — that kind of inconsistency can corrupt
+metrics in a pipeline if NULL rows are not handled explicitly beforehand.
+
+---
