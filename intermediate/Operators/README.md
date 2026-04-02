@@ -270,3 +270,71 @@ parentheses to control precedence — is a skill that prevents subtle data
 bugs in pipelines.
 
 ---
+
+## 3. range_operators.sql
+
+### Query 1 — Retrieve all customers whose score falls between 100 and 500
+```sql
+SELECT *
+FROM customers
+WHERE score BETWEEN 100 AND 500
+```
+
+**Breakdown:**
+- `BETWEEN` checks whether a value falls within a defined range.
+- It requires two boundaries — a lower boundary and an upper boundary — written as `BETWEEN lower AND upper`.
+- **Both boundaries are inclusive**, meaning rows where score equals exactly `100` or exactly `500` are included in the result.
+- Any value outside the range on either side evaluates to false and that row is excluded.
+
+**Expected Result:**
+
+| id | first_name | country | score |
+|----|------------|---------|-------|
+| 1  | Maria      | Germany | 350   |
+| 4  | Martin     | Germany | 500   |
+
+> Peter (score = 0) is below the lower boundary of 100 so he is excluded.
+> John (score = 900) and Georg (score = 750) are above the upper boundary of 500 so they are excluded.
+> Martin (score = 500) is included because the upper boundary is inclusive.
+
+---
+
+### Query 2 — Equivalent query using comparison operators
+```sql
+SELECT *
+FROM customers
+WHERE score >= 100 AND score <= 500
+```
+
+**Breakdown:**
+- This produces the exact same result as `BETWEEN`. It manually replicates the inclusive boundaries using `>=` and `<=` combined with `AND`.
+- `BETWEEN` is essentially shorthand for this pattern.
+- Both approaches are valid. `BETWEEN` is preferred when you want cleaner, more readable SQL — especially useful when working with date ranges in Data Engineering.
+
+**Expected Result:**
+
+| id | first_name | country | score |
+|----|------------|---------|-------|
+| 1  | Maria      | Germany | 350   |
+| 4  | Martin     | Germany | 500   |
+
+---
+
+### Key Takeaway
+
+`BETWEEN` is a range operator that filters rows falling within two inclusive
+boundaries. The word inclusive is the most important detail — beginners often
+assume `BETWEEN` works like a strict `>` and `<`, which leads to boundary
+rows being unexpectedly included or excluded.
+
+Always remember:
+```
+BETWEEN 100 AND 500  =  >= 100 AND <= 500
+```
+
+In Data Engineering, `BETWEEN` is used most frequently with date ranges — for
+example filtering records created within a specific month or quarter. Getting
+the boundary behaviour right is critical because an off-by-one day error in
+a date filter can silently miscount millions of records in a pipeline.
+
+---
