@@ -170,3 +170,103 @@ on one — `<>` is the ANSI SQL standard and slightly more portable across
 database engines.
 
 ---
+
+## 2. logical_operators.sql
+
+### Query 1 — Retrieve all customers from the USA AND with a score greater than 500
+```sql
+SELECT *
+FROM customers
+WHERE country = 'USA'
+AND score > 500
+```
+
+**Breakdown:**
+- `AND` combines two conditions. A row is only returned if **both** conditions are true at the same time.
+- `country = 'USA'` must be true **and** `score > 500` must also be true.
+- If either condition fails for a row, that row is excluded.
+
+**Expected Result:**
+
+| id | first_name | country | score |
+|----|------------|---------|-------|
+| 2  | John       | USA     | 900   |
+
+> Peter is from the USA but his score is 0, so he fails the second condition and is excluded.
+
+---
+
+### Query 2 — Retrieve all customers from the USA OR with a score greater than 500
+```sql
+SELECT *
+FROM customers
+WHERE country = 'USA'
+OR score > 500
+```
+
+**Breakdown:**
+- `OR` combines two conditions. A row is returned if **at least one** condition is true.
+- A row only gets excluded if it fails **both** conditions simultaneously.
+
+**Expected Result:**
+
+| id | first_name | country | score |
+|----|------------|---------|-------|
+| 2  | John       | USA     | 900   |
+| 3  | Georg      | UK      | 750   |
+| 5  | Peter      | USA     | 0     |
+
+> Georg is not from the USA but his score is 750 > 500, so he passes on the second condition.
+> Peter's score is 0 but he is from the USA, so he passes on the first condition.
+> Maria and Martin are from Germany with scores below 500 — they fail both conditions and are excluded.
+
+---
+
+### Query 3 — Retrieve all customers with a score NOT less than 500
+```sql
+-- Option 1
+SELECT *
+FROM customers
+WHERE score >= 500
+
+-- Option 2
+SELECT *
+FROM customers
+WHERE NOT score < 500
+```
+
+**Breakdown:**
+- `NOT` inverts a single condition. It does not combine two conditions like `AND` and `OR` do — it simply flips the result of whatever condition follows it.
+- `NOT score < 500` means: exclude any row where score is less than 500. What remains are all rows where score is 500 or above.
+- Both options produce identical results. Option 1 is the cleaner and more readable approach. Option 2 demonstrates how `NOT` works as a logical flip.
+
+**Expected Result:**
+
+| id | first_name | country | score |
+|----|------------|---------|-------|
+| 2  | John       | USA     | 900   |
+| 3  | Georg      | UK      | 750   |
+| 4  | Martin     | Germany | 500   |
+
+---
+
+### Key Takeaway
+
+The three logical operators each serve a distinct purpose:
+
+| Operator | Behavior                                          |
+|----------|---------------------------------------------------|
+| `AND`    | All conditions must be true — stricter filter     |
+| `OR`     | At least one condition must be true — wider net   |
+| `NOT`    | Inverts a single condition — flips true and false |
+
+A practical rule of thumb: `AND` shrinks your result set, `OR` expands it.
+`NOT` is not a combining operator — it wraps around one condition to negate it.
+
+In Data Engineering, logical operators are used heavily inside transformation
+queries to route, exclude, or flag records based on multiple business rules
+at once. Combining them correctly — especially `AND` with `OR` using
+parentheses to control precedence — is a skill that prevents subtle data
+bugs in pipelines.
+
+---
