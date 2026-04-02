@@ -338,3 +338,91 @@ the boundary behaviour right is critical because an off-by-one day error in
 a date filter can silently miscount millions of records in a pipeline.
 
 ---
+
+## 4. membership_operators.sql
+
+### Query 1 — Retrieve all customers from Germany or USA
+```sql
+-- Option 1
+SELECT *
+FROM customers
+WHERE country = 'Germany' OR country = 'USA'
+
+-- Option 2
+SELECT *
+FROM customers
+WHERE country IN ('Germany', 'USA')
+```
+
+**Breakdown:**
+- Both options produce identical results.
+- Option 1 uses `OR` to chain multiple equality checks — readable with two values but gets messy fast as the list grows.
+- Option 2 uses `IN`, which checks whether the column value is a member of a provided list of values written inside parentheses.
+- `IN` is essentially a cleaner shorthand for chaining multiple `OR` conditions on the same column.
+
+**Expected Result:**
+
+| id | first_name | country | score |
+|----|------------|---------|-------|
+| 1  | Maria      | Germany | 350   |
+| 2  | John       | USA     | 900   |
+| 4  | Martin     | Germany | 500   |
+| 5  | Peter      | USA     | 0     |
+
+> Georg (UK) is the only customer excluded since UK is not in the list.
+
+---
+
+### Query 2 — Retrieve all customers except from Germany or USA
+```sql
+-- Option 1
+SELECT *
+FROM customers
+WHERE country != 'Germany' AND country != 'USA'
+
+-- Option 2
+SELECT *
+FROM customers
+WHERE country NOT IN ('Germany', 'USA')
+```
+
+**Breakdown:**
+- `NOT IN` is the inverse of `IN` — it excludes any row where the column value matches anything in the list.
+- Option 1 uses `!=` with `AND` to manually exclude each value. Notice that exclusion requires `AND` not `OR` — a row must be not Germany **and** not USA simultaneously to be excluded from both.
+- Option 2 with `NOT IN` handles this logic automatically and is far cleaner.
+- A common beginner mistake is writing `!=` conditions with `OR` instead of `AND`, which returns everything because no single row can be both Germany and USA at the same time.
+
+**Expected Result:**
+
+| id | first_name | country | score |
+|----|------------|---------|-------|
+| 3  | Georg      | UK      | 750   |
+
+> Georg is the only customer whose country does not appear in the exclusion list.
+
+---
+
+### Key Takeaway
+
+`IN` and `NOT IN` are membership operators that check whether a value belongs
+to a defined list. The practical rule is simple:
+
+| Situation                        | Use this         |
+|----------------------------------|------------------|
+| Matching 1 value                 | `=`              |
+| Matching 2+ values, same column  | `IN`             |
+| Excluding 1 value                | `!=` or `<>`     |
+| Excluding 2+ values, same column | `NOT IN`         |
+
+Also note the `AND` vs `OR` distinction when excluding manually:
+- Including multiple values → `OR` (`country = 'Germany' OR country = 'USA'`)
+- Excluding multiple values → `AND` (`country != 'Germany' AND country != 'USA'`)
+
+This is one of the most common sources of logic errors in SQL filtering.
+`NOT IN` sidesteps the confusion entirely, which is why it is preferred.
+
+In Data Engineering, `IN` is frequently used to filter records by a known
+set of category values, status codes, or region identifiers — making queries
+both cleaner and easier to maintain when the list needs updating.
+
+---
